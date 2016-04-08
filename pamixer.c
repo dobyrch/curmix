@@ -6,6 +6,25 @@
 #include <pulse/mainloop.h>
 #include <pulse/subscribe.h>
 
+/*
+ * Define struct with all necessary fields: name, volume, id
+ * Static list of *pointers* to struct
+ * Populate initial list, _copying_ into struct 
+ * Draw screen
+ * On updates, add/modify/delete&shift pointers (LOCK)
+ * After updates (or on keypresses) redraw screen (LOCK)
+ *
+ */
+ 
+void draw_ui(void)
+{
+	static cursor_pos = 0;
+
+	if cursor
+
+	refresh();
+}
+
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
 {
 	printf("index: %d\n", idx);
@@ -17,7 +36,6 @@ void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t id
 void success(pa_context *c, int success, void *userdata)
 {
 	printf("Success: %d\n", success);
-	pa_context_set_subscribe_callback(c, context_callback, NULL);
 }
 
 
@@ -58,6 +76,7 @@ static void context_state_callback(pa_context *c, void *userdata) {
 		    break;
         case PA_CONTEXT_READY:
 		;
+		pa_context_set_subscribe_callback(c, context_callback, NULL);
 		pa_operation *foo = pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK_INPUT, success, NULL);
 		printf("subscribe operation: %ld\n", (long)foo);
 		pa_context_get_sink_input_info_list(c, callback, NULL);
