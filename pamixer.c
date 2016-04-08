@@ -8,7 +8,9 @@
 
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
 {
-	printf("Got event:\n");
+	printf("index: %d\n", idx);
+	printf("FACILITY_MASK: %d\n", t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
+	printf("    TYPE_MASK: %d\n", t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
 	printf("\n");
 }
 
