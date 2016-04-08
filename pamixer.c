@@ -6,9 +6,28 @@
 #include <pulse/mainloop.h>
 
 
-void callback(pa_context *c, const pa_sink_info *i, int eol, void *userdata)
+void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata)
 {
-	printf("Doing stuff\n");
+	/*
+	 * Use application.name; fall back to application.process.binary
+	 * If one of the above is a dup, also show media.name
+	 */
+	void *state = NULL;
+	const char *prop;
+
+	printf("EOL: %d\n", eol);
+	if (eol)
+		return;
+
+	printf("%s\n", i->name);
+	printf("%d\n", ((i->volume).values)[0]);
+
+	while ((prop = pa_proplist_iterate(i->proplist, &state)) != NULL) {
+		printf("%-30s=\t%s\n", prop, pa_proplist_gets(i->proplist, prop));
+	}
+
+
+	printf("\n");
 }
 
 static void context_state_callback(pa_context *c, void *userdata) {
@@ -34,7 +53,7 @@ static void context_state_callback(pa_context *c, void *userdata) {
 		printf("context setting name\n");
 		    break;
         case PA_CONTEXT_READY:
-		pa_context_get_sink_input_info_list(c, (pa_sink_input_info_cb_t)callback, NULL);
+		pa_context_get_sink_input_info_list(c, callback, NULL);
 		printf("context ready\n");
 		break;
 
@@ -73,9 +92,6 @@ int main(void)
 		printf("pa_mainloop_run() failed.\n");
 		return -1;
 	}
-
-	
-
 
 
 	return 0;
