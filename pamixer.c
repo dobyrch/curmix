@@ -34,6 +34,10 @@ static WINDOW *windows[MAX_INPUTS];
  *
  */
 
+void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata);
+void success(pa_context *c, int success, void *userdata);
+void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata);
+
 void draw_ui(void)
 {
 	static int cursor_pos = 0;
@@ -57,12 +61,15 @@ void draw_ui(void)
 		wmove(window, 1, 1);
 
 		volume = inputs[i].volume/1638;
-		fprintf(stderr, "Volume is %d\n", volume);
+		//fprintf(stderr, "Volume is %d\n", volume);
 		for (j = 0; j < volume; ++j) {
 			//setcchar(&bar, &shade, A_NORMAL, COLOR_PAIR(j/8+1), NULL);
 			setcchar(&bar, &shade, A_NORMAL, j/8+1, NULL);
 			wadd_wch(window, &bar);
 			//waddch(window, '*' | COLOR_PAIR(j/8+1));
+		}
+		for (j = volume; j < 40; ++j) {
+			waddch(window, ' ');
 		}
 		//mvwaddwstr(window, 1, 2, L"\u2592\u2592\u2592\u2592");
 
@@ -89,6 +96,9 @@ static void time_event_callback(pa_mainloop_api *m, pa_time_event *e, const stru
 
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
 {
+	num_inputs = 0;
+	//Decrement operation?
+	pa_context_get_sink_input_info_list(c, callback, NULL);
 	//printf("index: %d\n", idx);
 	//printf("FACILITY_MASK: %d\n", t & PA_SUBSCRIPTION_EVENT_FACILITY_MASK);
 	//printf("	TYPE_MASK: %d\n", t & PA_SUBSCRIPTION_EVENT_TYPE_MASK);
@@ -156,6 +166,7 @@ static void context_state_callback(pa_context *c, void *userdata) {
 	case PA_CONTEXT_SETTING_NAME:
 		break;
 	case PA_CONTEXT_READY:
+		//TODO: dec operation?
 		operation = pa_context_get_sink_input_info_list(c, callback, NULL);
 		//printf("context ready\n");
 		break;
