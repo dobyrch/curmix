@@ -176,6 +176,7 @@ int main(void)
 
 	setlocale(LC_ALL, "");
 	initscr();
+	curs_set(0);
 	use_default_colors();
 	start_color();
 	init_pair(1, COLOR_GREEN, COLOR_GREEN);
