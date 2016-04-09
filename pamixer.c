@@ -57,7 +57,10 @@ void draw_ui(void)
 		}
 
 		box(window, 0, 0);
+
 		mvwaddstr(window, 0, 3, inputs[i].name);
+		if (i == cursor_pos)
+			mvwchgat(window, 0, 3, strlen(inputs[i].name), A_BOLD, 6, NULL);
 		wmove(window, 1, 1);
 
 		volume = inputs[i].volume/1638;
@@ -76,6 +79,12 @@ void draw_ui(void)
 		//touchwin(window);
 		//wrefresh(window);
 		wnoutrefresh(window);
+	}
+	for (i = num_inputs; i < MAX_INPUTS; ++i) {
+		if (windows[i] == NULL)
+			break;
+
+		wclear(windows[i]);
 	}
 
 	doupdate();
@@ -195,6 +204,7 @@ int main(void)
 	init_pair(3, COLOR_YELLOW, COLOR_YELLOW);
 	init_pair(4, COLOR_YELLOW, COLOR_RED);
 	init_pair(5, COLOR_RED, COLOR_RED);
+	init_pair(6, COLOR_MAGENTA, -1);
 
 	if (!(m = pa_mainloop_new())) {
 		//printf("pa_mainloop_new() failed.\n");
