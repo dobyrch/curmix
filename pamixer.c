@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <locale.h>
 #include <stdio.h>
 #include <curses.h>
 /* Remove unneeded headers */
@@ -51,6 +52,7 @@ void draw_ui(void)
 
 		box(window, 0, 0);
 		mvwaddstr(window, 0, 3, inputs[i].name);
+		mvwaddwstr(window, 1, 2, L"t\u2592\u2592\u2592\u2592");
 
 		//touchwin(window);
 		//wrefresh(window);
@@ -160,6 +162,7 @@ int main(void)
 	gettimeofday(&now, NULL);
 	pa_timeval_add(&now, ONE_SECOND);
 
+	setlocale(LC_ALL, "");
 	initscr();
 
 	if (!(m = pa_mainloop_new())) {

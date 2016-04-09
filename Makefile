@@ -1,2 +1,2 @@
 pamixer: pamixer.c
-	clang -g -O0 pamixer.c -lpulse -lcurses -o pamixer
+	clang $^ -o $@ -g -O0 -D_XOPEN_SOURCE_EXTENDED -lpulse -lcurses
