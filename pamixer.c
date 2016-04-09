@@ -38,7 +38,6 @@ static WINDOW *windows[MAX_INPUTS];
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata);
 void success(pa_context *c, int success, void *userdata);
 void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata);
-void volback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata);
 void stdin_callback(pa_mainloop_api*a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *userdata);
 
 void draw_ui(void)
@@ -115,27 +114,21 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 		break;
 	case KEY_LEFT:
 	case 'h':
-		pa_context_get_sink_input_info(context, inputs[cursor_pos].index, volback, &sub);
-		/*
-		fprintf(stderr, "index: %d\n", inputs[cursor_pos].index);
 		pa_cvolume_set(&inputs[cursor_pos].volume, inputs[cursor_pos].volume.channels, inputs[cursor_pos].volume.values[0] - 3276);
-		pa_context_set_sink_volume_by_index(context,
+		pa_context_set_sink_input_volume(context,
 			inputs[cursor_pos].index,
 			&inputs[cursor_pos].volume,
 			success,
 			NULL);
-		*/
 		break;
 	case KEY_RIGHT:
 	case 'l':
-		/*
 		pa_cvolume_set(&inputs[cursor_pos].volume, inputs[cursor_pos].volume.channels, inputs[cursor_pos].volume.values[0] + 3276);
-		pa_context_set_sink_volume_by_index(context,
+		pa_context_set_sink_input_volume(context,
 			inputs[cursor_pos].index,
 			&inputs[cursor_pos].volume,
 			success,
 			NULL);
-		*/
 		break;
 	default:
 		mvaddstr(0, 0, "Unknown key ");
@@ -173,20 +166,8 @@ void success(pa_context *c, int success, void *userdata)
 
 	if (!success) {
 		err = pa_context_errno(c);
-		fprintf(stderr, "%s\n", pa_strerror(err));
+		//fprintf(stderr, "%s\n", pa_strerror(err));
 	}
-}
-
-void volback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata)
-{
-	int inc = *(int *)userdata;
-	if (eol)
-		return;
-	
-
-	fprintf(stderr, "index: %d\n", i->index);
-	//pa_cvolume_set(&i->volume, i->volume.channels, i->volume.values[0] + inc*3276);
-	i->volume.values[0] += inc*3276;
 }
 
 void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata)
@@ -212,7 +193,6 @@ void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdat
 	if (name == NULL)
 		name = "unknown";
 
-	fprintf(stderr, "%s writable: %d\n", name, i->volume_writable);
 	strncpy(inputs[num_inputs].name, name, MAX_NAME_LEN);
 	//inputs[num_inputs].volume = i->volume.values[0];
 	memcpy(&inputs[num_inputs].volume, &i->volume, sizeof(pa_cvolume));
