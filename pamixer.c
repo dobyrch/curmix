@@ -16,7 +16,7 @@
 
 struct input_data {
 	char name[MAX_NAME_LEN];
-	uint32_t volume;
+	pa_cvolume volume;
 	uint32_t index;
 };
 
@@ -64,7 +64,7 @@ void draw_ui(void)
 			mvwchgat(window, 0, 3, strlen(inputs[i].name), A_BOLD, 6, NULL);
 		wmove(window, 1, 1);
 
-		volume = inputs[i].volume/1638;
+		volume = inputs[i].volume.values[0]/1638;
 		//fprintf(stderr, "Volume is %d\n", volume);
 		for (j = 0; j < volume; ++j) {
 			//setcchar(&bar, &shade, A_NORMAL, COLOR_PAIR(j/8+1), NULL);
@@ -93,9 +93,10 @@ void draw_ui(void)
 	//refresh();
 }
 
-void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *userdata)
+void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *context)
 {
 	int ch;
+
 	switch (ch = getch()) {
 	case KEY_UP: 
 	case 'k':
@@ -109,9 +110,21 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 		break;
 	case KEY_LEFT:
 	case 'h':
+		pa_cvolume_set(&inputs[cursor_pos].volume, inputs[cursor_pos].volume.channels, inputs[cursor_pos].volume.values[0] - 3276);
+		pa_context_set_sink_volume_by_index(context,
+			inputs[cursor_pos].index,
+			&inputs[cursor_pos].volume,
+			NULL,
+			NULL);
 		break;
 	case KEY_RIGHT:
 	case 'l':
+		pa_cvolume_set(&inputs[cursor_pos].volume, inputs[cursor_pos].volume.channels, inputs[cursor_pos].volume.values[0] + 3276);
+		pa_context_set_sink_volume_by_index(context,
+			inputs[cursor_pos].index,
+			&inputs[cursor_pos].volume,
+			NULL,
+			NULL);
 		break;
 	default:
 		mvaddstr(0, 0, "Unknown key ");
@@ -171,7 +184,8 @@ void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdat
 	if (name == NULL)
 		name = "unknown";
 	strncpy(inputs[num_inputs].name, name, MAX_NAME_LEN);
-	inputs[num_inputs].volume = i->volume.values[0];
+	//inputs[num_inputs].volume = i->volume.values[0];
+	memcpy(&inputs[num_inputs].volume, &i->volume, sizeof(pa_cvolume));
 	inputs[num_inputs].index = i->index;
 	++num_inputs;
 	//printf("Got a sink: %d\n", num_inputs);
@@ -251,12 +265,12 @@ int main(void)
 		return -1;
 	}
 
-	if (!(stdin_event = mapi->io_new(mapi, STDIN_FILENO, PA_IO_EVENT_INPUT, stdin_callback, NULL))) {
+	if (!(context = pa_context_new(mapi, "Foo"))) {
+		//printf("pa_context_new() failed.\n");
 		return -1;
 	}
 
-	if (!(context = pa_context_new(mapi, "Foo"))) {
-		//printf("pa_context_new() failed.\n");
+	if (!(stdin_event = mapi->io_new(mapi, STDIN_FILENO, PA_IO_EVENT_INPUT, stdin_callback, context))) {
 		return -1;
 	}
 
