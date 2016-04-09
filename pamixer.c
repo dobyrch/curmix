@@ -37,8 +37,10 @@ static WINDOW *windows[MAX_INPUTS];
 void draw_ui(void)
 {
 	static int cursor_pos = 0;
-	int i;
+	int i, j, volume;
+	cchar_t bar;
 	WINDOW *window;
+	static const wchar_t shade = L'\u2592';
 
 	if (num_inputs == 0) {
 		mvaddstr(5, 5, "No Inputs found");
@@ -52,7 +54,17 @@ void draw_ui(void)
 
 		box(window, 0, 0);
 		mvwaddstr(window, 0, 3, inputs[i].name);
-		mvwaddwstr(window, 1, 2, L"t\u2592\u2592\u2592\u2592");
+		wmove(window, 1, 1);
+
+		volume = inputs[i].volume/1638;
+		fprintf(stderr, "Volume is %d\n", volume);
+		for (j = 0; j < volume; ++j) {
+			//setcchar(&bar, &shade, A_NORMAL, COLOR_PAIR(j/8+1), NULL);
+			setcchar(&bar, &shade, A_NORMAL, j/8+1, NULL);
+			wadd_wch(window, &bar);
+			//waddch(window, '*' | COLOR_PAIR(j/8+1));
+		}
+		//mvwaddwstr(window, 1, 2, L"\u2592\u2592\u2592\u2592");
 
 		//touchwin(window);
 		//wrefresh(window);
@@ -164,6 +176,12 @@ int main(void)
 
 	setlocale(LC_ALL, "");
 	initscr();
+	start_color();
+	init_pair(1, COLOR_GREEN, COLOR_GREEN);
+	init_pair(2, COLOR_GREEN, COLOR_YELLOW);
+	init_pair(3, COLOR_YELLOW, COLOR_YELLOW);
+	init_pair(4, COLOR_YELLOW, COLOR_RED);
+	init_pair(5, COLOR_RED, COLOR_RED);
 
 	if (!(m = pa_mainloop_new())) {
 		//printf("pa_mainloop_new() failed.\n");
