@@ -20,6 +20,7 @@ struct input_data {
 	uint32_t index;
 };
 
+static int cursor_pos = 0;
 static int num_inputs = 0;
 static struct input_data inputs[MAX_INPUTS];
 static WINDOW *windows[MAX_INPUTS];
@@ -37,10 +38,10 @@ static WINDOW *windows[MAX_INPUTS];
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata);
 void success(pa_context *c, int success, void *userdata);
 void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata);
+void stdin_callback(pa_mainloop_api*a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *userdata);
 
 void draw_ui(void)
 {
-	static int cursor_pos = 0;
 	int i, j, volume;
 	cchar_t bar;
 	WINDOW *window;
@@ -90,6 +91,34 @@ void draw_ui(void)
 	doupdate();
 
 	//refresh();
+}
+
+void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *userdata)
+{
+	int ch;
+	switch (ch = getch()) {
+	case KEY_UP: 
+	case 'k':
+		if (cursor_pos > 0)
+			--cursor_pos;
+		break;
+	case KEY_DOWN:
+	case 'j':
+		if (cursor_pos + 1 < num_inputs)
+			++cursor_pos;
+		break;
+	case KEY_LEFT:
+	case 'h':
+		break;
+	case KEY_RIGHT:
+	case 'l':
+		break;
+	default:
+		mvaddstr(0, 0, "Unknown key ");
+		addch(ch);
+	}
+
+	draw_ui();
 }
 
 static void time_event_callback(pa_mainloop_api *m, pa_time_event *e, const struct timeval *tv, void *userdata) {
@@ -190,12 +219,16 @@ int main(void)
 	pa_mainloop_api *mapi = NULL;
 	pa_context *context;
 	pa_time_event *time_event = NULL;
+	pa_io_event *stdin_event = NULL;
 	struct timeval now;
 	gettimeofday(&now, NULL);
 	pa_timeval_add(&now, ONE_SECOND);
 
 	setlocale(LC_ALL, "");
 	initscr();
+	noecho();
+	cbreak();
+	keypad(stdscr, TRUE);
 	curs_set(0);
 	use_default_colors();
 	start_color();
@@ -215,6 +248,10 @@ int main(void)
 
 	if (!(time_event = mapi->time_new(mapi, &now, time_event_callback, NULL))){
 		//fprintf(stderr, "time_new() failed.\n");
+		return -1;
+	}
+
+	if (!(stdin_event = mapi->io_new(mapi, STDIN_FILENO, PA_IO_EVENT_INPUT, stdin_callback, NULL))) {
 		return -1;
 	}
 
