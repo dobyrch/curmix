@@ -52,7 +52,7 @@ int main(void)
 	setlocale(LC_ALL, "");
 	initscr();
 	noecho();
-	curs_set(0);
+	curs_set(FALSE);
 	cbreak();
 	keypad(stdscr, TRUE);
 
