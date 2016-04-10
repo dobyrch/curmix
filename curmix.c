@@ -91,12 +91,14 @@ static void draw_ui(void)
 		refresh();
 	}
 
+	if (cursor_pos >= num_inputs && num_inputs > 0)
+		cursor_pos = num_inputs - 1;
+
 	for (i = 0; i < num_inputs; ++i) {
 		input = &inputs[i];
 		w = windows[i];
-		if (w == NULL) {
+		if (w == NULL)
 			w = windows[i] = newwin(3, 42, 4*i + 2, 2);
-		}
 
 		box(w, 0, 0);
 		mvwaddstr(w, 0, 3, input->name);
