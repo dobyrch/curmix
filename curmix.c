@@ -265,7 +265,7 @@ int main(void)
 
 	mapi = pa_mainloop_get_api(m);
 
-	if (!(context = pa_context_new(mapi, "Foo"))) {
+	if (!(context = pa_context_new(mapi, "curmix"))) {
 		//printf("pa_context_new() failed.\n");
 		return -1;
 	}

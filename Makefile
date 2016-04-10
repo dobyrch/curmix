@@ -1,2 +1,2 @@
-pamixer: pamixer.c
-	clang $^ -o $@ -g -O0 -D_XOPEN_SOURCE_EXTENDED -lpulse -lcurses
+curmix: curmix.c
+	clang $^ -o $@ -D_XOPEN_SOURCE_EXTENDED -lcurses -lpulse
