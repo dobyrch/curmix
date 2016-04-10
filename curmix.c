@@ -43,8 +43,8 @@ static WINDOW *windows[MAX_INPUTS];
  */
 int main(void)
 {
-	pa_mainloop *m = NULL;
-	pa_mainloop_api *a = NULL;
+	pa_mainloop *m;
+	pa_mainloop_api *a;
 	pa_context *c;
 
 	setlocale(LC_ALL, "");
