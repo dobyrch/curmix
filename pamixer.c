@@ -1,15 +1,12 @@
-#include <assert.h>
+#include <curses.h>
 #include <locale.h>
 #include <stdio.h>
-#include <curses.h>
-/* Remove unneeded headers */
 #include <string.h>
 #include <unistd.h>
 
 #include <pulse/pulseaudio.h>
 
 
-#define ONE_SECOND 1000000
 #define INC PA_VOLUME_NORM/20
 
 #define MAX_INPUTS 64
@@ -45,10 +42,9 @@ void stdin_callback(pa_mainloop_api*a, pa_io_event *e, int fd, pa_io_event_flags
 void draw_ui(void)
 {
 	int i, j, volume;
-	cchar_t bar, muted;
+	cchar_t bar;
 	WINDOW *window;
 	static const wchar_t shade = L'\u2592';
-	static const wchar_t diag_cross = L'\u2573';
 
 	if (num_inputs == 0) {
 		mvaddstr(5, 5, "No Inputs found");
@@ -109,10 +105,6 @@ void draw_ui(void)
 void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *context)
 {
 	int ch;
-	static int add = 1;
-	static int sub = -1;
-
-	assert(context);
 
 	switch (ch = getch()) {
 	case KEY_UP: 
@@ -155,17 +147,6 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 	draw_ui();
 }
 
-static void time_event_callback(pa_mainloop_api *m, pa_time_event *e, const struct timeval *tv, void *userdata) {
-    struct timeval now;
-
-	//printf("TICK\n");
-	//fflush(stdout);
-
-    gettimeofday(&now, NULL);
-    pa_timeval_add(&now, ONE_SECOND);
-    m->time_restart(e, &now);
-}
-
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata)
 {
 	num_inputs = 0;
@@ -201,7 +182,8 @@ void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdat
 	if (eol) {
 		draw_ui();
 		pa_context_set_subscribe_callback(c, context_callback, NULL);
-		pa_operation *foo = pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK_INPUT, success, NULL);
+		/* unref returned operation? */
+		pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK_INPUT, success, NULL);
 		//printf("subscribe operation: %ld\n", (long)foo);
 		return;
 	}
@@ -235,8 +217,6 @@ void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdat
 static void context_state_callback(pa_context *c, void *userdata) {
 	pa_operation *operation;
 
-	assert(c);
-
 	switch (pa_context_get_state(c)) {
 	case PA_CONTEXT_TERMINATED:
 	case PA_CONTEXT_UNCONNECTED:
@@ -260,11 +240,7 @@ int main(void)
 	pa_mainloop *m = NULL;
 	pa_mainloop_api *mapi = NULL;
 	pa_context *context;
-	pa_time_event *time_event = NULL;
 	pa_io_event *stdin_event = NULL;
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	pa_timeval_add(&now, ONE_SECOND);
 
 	setlocale(LC_ALL, "");
 	initscr();
@@ -288,11 +264,6 @@ int main(void)
 	}
 
 	mapi = pa_mainloop_get_api(m);
-
-	if (!(time_event = mapi->time_new(mapi, &now, time_event_callback, NULL))){
-		//fprintf(stderr, "time_new() failed.\n");
-		return -1;
-	}
 
 	if (!(context = pa_context_new(mapi, "Foo"))) {
 		//printf("pa_context_new() failed.\n");
