@@ -6,7 +6,7 @@
 
 #include <pulse/pulseaudio.h>
 
-
+/* Change volume in increments of 5% */
 #define INC PA_VOLUME_NORM/20
 
 #define MAX_INPUTS 64
@@ -103,10 +103,11 @@ void draw_ui(void)
 
 void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *context)
 {
+	struct input_data *input;
 	int ch;
 
 	switch (ch = getch()) {
-	case KEY_UP: 
+	case KEY_UP:
 	case 'k':
 		if (cursor_pos > 0)
 			--cursor_pos;
@@ -118,19 +119,21 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 		break;
 	case KEY_LEFT:
 	case 'h':
-		pa_cvolume_dec(&inputs[cursor_pos].volume, INC);
+		input = &inputs[cursor_pos];
+		pa_cvolume_dec(&input->volume, INC);
 		pa_context_set_sink_input_volume(context,
-			inputs[cursor_pos].index,
-			&inputs[cursor_pos].volume,
+			input->index,
+			&input->volume,
 			success,
 			NULL);
 		break;
 	case KEY_RIGHT:
 	case 'l':
-		pa_cvolume_inc_clamp(&inputs[cursor_pos].volume, INC, PA_VOLUME_NORM);
+		input = &inputs[cursor_pos];
+		pa_cvolume_inc_clamp(&input->volume, INC, PA_VOLUME_NORM);
 		pa_context_set_sink_input_volume(context,
-			inputs[cursor_pos].index,
-			&inputs[cursor_pos].volume,
+			input->index,
+			&input->volume,
 			success,
 			NULL);
 		break;
