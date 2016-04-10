@@ -26,7 +26,6 @@ static WINDOW *windows[MAX_INPUTS];
 
 /*
  * TODO:
- * - Clean up inputs that have been closed
  * - Redraw on WINCH (And use up more screen space)
  * - Disambiguate duplicate names
  * - Handle large # of inputs (scrolling, don't segfault on inputs > 64)
@@ -45,7 +44,8 @@ void draw_ui(void)
 	static const wchar_t shade = L'\u2592';
 
 	if (num_inputs == 0) {
-		mvaddstr(5, 5, "No Inputs found");
+		mvaddstr(3, 5, "No Inputs found");
+		refresh();
 	}
 
 	for (i = 0; i < num_inputs; ++i) {
@@ -93,6 +93,7 @@ void draw_ui(void)
 			break;
 
 		wclear(windows[i]);
+		wnoutrefresh(windows[i]);
 	}
 
 	doupdate();
