@@ -25,13 +25,11 @@ static struct input_data inputs[MAX_INPUTS];
 static WINDOW *windows[MAX_INPUTS];
 
 /*
- * Define struct with all necessary fields: name, volume, id
- * Static list of *pointers* to struct
- * Populate initial list, _copying_ into struct
- * Draw screen
- * On updates, add/modify/delete&shift pointers (LOCK)
- * After updates (or on keypresses) redraw screen (LOCK)
- *
+ * TODO:
+ * - Clean up inputs that have been closed
+ * - Redraw on WINCH (And use up more screen space)
+ * - Disambiguate duplicate names
+ * - Handle large # of inputs (scrolling, don't segfault on inputs > 64)
  */
 
 void context_callback(pa_context *c, pa_subscription_event_type_t t, uint32_t idx, void *userdata);
@@ -60,7 +58,7 @@ void draw_ui(void)
 
 		mvwaddstr(window, 0, 3, inputs[i].name);
 		if (i == cursor_pos)
-			mvwchgat(window, 0, 3, strlen(inputs[i].name), A_BOLD, 7, NULL);
+			mvwchgat(window, 0, 3, strlen(inputs[i].name), A_NORMAL, 7, NULL);
 		wmove(window, 1, 1);
 
 		volume = inputs[i].volume.values[0]/1638;
@@ -256,7 +254,7 @@ int main(void)
 	init_pair(4, COLOR_YELLOW, COLOR_RED);
 	init_pair(5, COLOR_RED, COLOR_RED);
 	init_pair(6, COLOR_GREEN, -1);
-	init_pair(7, COLOR_MAGENTA, -1);
+	init_pair(7, COLOR_BLUE, -1);
 
 	if (!(m = pa_mainloop_new())) {
 		//printf("pa_mainloop_new() failed.\n");
