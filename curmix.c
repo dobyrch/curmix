@@ -1,5 +1,6 @@
 #include <curses.h>
 #include <locale.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -10,6 +11,8 @@
 static void draw_ui(void);
 static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd,
 	pa_io_event_flags_t f, void *context);
+static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal,
+	void *userdata);
 static void context_state_cb(pa_context *c, void *userdata);
 static void input_event_cb(pa_context *c, pa_subscription_event_type_t t,
 	uint32_t index, void *userdata);
@@ -36,7 +39,6 @@ static WINDOW *windows[MAX_INPUTS];
 
 /*
  * TODO:
- * - Redraw on WINCH (And use up more screen space)
  * - Disambiguate duplicate names
  * - Handle large # of inputs (scrolling, don't segfault on inputs > 64)
  * - Clean up on exit (free main loop, endwin)
@@ -72,6 +74,9 @@ int main(void)
 	pa_context_connect(c, NULL, PA_CONTEXT_NOFLAGS, NULL);
 
 	a->io_new(a, STDIN_FILENO, PA_IO_EVENT_INPUT, stdin_cb, c);
+
+	pa_signal_init(a);
+	pa_signal_new(SIGWINCH, signal_cb, NULL);
 
 	pa_mainloop_run(m, NULL);
 
@@ -183,6 +188,17 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 	}
 
 	draw_ui();
+}
+
+static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal, void *userdata)
+{
+	switch (signal) {
+	case SIGWINCH:
+		clear();
+		refresh();
+		draw_ui();
+		break;
+	}
 }
 
 static void context_state_cb(pa_context *c, void *userdata)
