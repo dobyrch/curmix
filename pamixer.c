@@ -17,6 +17,7 @@
 struct input_data {
 	char name[MAX_NAME_LEN];
 	pa_cvolume volume;
+	int mute;
 	uint32_t index;
 };
 
@@ -43,9 +44,10 @@ void stdin_callback(pa_mainloop_api*a, pa_io_event *e, int fd, pa_io_event_flags
 void draw_ui(void)
 {
 	int i, j, volume;
-	cchar_t bar;
+	cchar_t bar, muted;
 	WINDOW *window;
 	static const wchar_t shade = L'\u2592';
+	static const wchar_t diag_cross = L'\u2573';
 
 	if (num_inputs == 0) {
 		mvaddstr(5, 5, "No Inputs found");
@@ -61,14 +63,24 @@ void draw_ui(void)
 
 		mvwaddstr(window, 0, 3, inputs[i].name);
 		if (i == cursor_pos)
-			mvwchgat(window, 0, 3, strlen(inputs[i].name), A_BOLD, 6, NULL);
+			mvwchgat(window, 0, 3, strlen(inputs[i].name), A_BOLD, 7, NULL);
 		wmove(window, 1, 1);
 
 		volume = inputs[i].volume.values[0]/1638;
+
+		/*
+		if (inputs[i].mute) {
+			setcchar(&muted, &diag_cross, A_BOLD, 6, NULL);
+			wadd_wch(window, &muted);
+			wnoutrefresh(window);
+			break;
+		}
+		*/
+
 		//fprintf(stderr, "Volume is %d\n", volume);
 		for (j = 0; j < volume; ++j) {
 			//setcchar(&bar, &shade, A_NORMAL, COLOR_PAIR(j/8+1), NULL);
-			setcchar(&bar, &shade, A_NORMAL, j/8+1, NULL);
+			setcchar(&bar, &shade, inputs[i].mute ? A_BOLD : A_NORMAL, inputs[i].mute ? 6 : j/8+1, NULL);
 			wadd_wch(window, &bar);
 			//waddch(window, '*' | COLOR_PAIR(j/8+1));
 		}
@@ -130,9 +142,13 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 			success,
 			NULL);
 		break;
-	default:
-		mvaddstr(0, 0, "Unknown key ");
-		addch(ch);
+	case 'm':
+		pa_context_set_sink_input_mute(context,
+			inputs[cursor_pos].index,
+			!inputs[cursor_pos].mute,
+			success,
+			NULL);
+		break;
 	}
 
 	draw_ui();
@@ -196,6 +212,7 @@ void callback(pa_context *c, const pa_sink_input_info *i, int eol, void *userdat
 	strncpy(inputs[num_inputs].name, name, MAX_NAME_LEN);
 	//inputs[num_inputs].volume = i->volume.values[0];
 	memcpy(&inputs[num_inputs].volume, &i->volume, sizeof(pa_cvolume));
+	inputs[num_inputs].mute = i->mute;
 	inputs[num_inputs].index = i->index;
 	++num_inputs;
 	//printf("Got a sink: %d\n", num_inputs);
@@ -261,7 +278,8 @@ int main(void)
 	init_pair(3, COLOR_YELLOW, COLOR_YELLOW);
 	init_pair(4, COLOR_YELLOW, COLOR_RED);
 	init_pair(5, COLOR_RED, COLOR_RED);
-	init_pair(6, COLOR_MAGENTA, -1);
+	init_pair(6, COLOR_GREEN, -1);
+	init_pair(7, COLOR_MAGENTA, -1);
 
 	if (!(m = pa_mainloop_new())) {
 		//printf("pa_mainloop_new() failed.\n");
