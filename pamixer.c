@@ -10,6 +10,7 @@
 
 
 #define ONE_SECOND 1000000
+#define INC PA_VOLUME_NORM/20
 
 #define MAX_INPUTS 64
 #define MAX_NAME_LEN 32
@@ -126,7 +127,7 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 		break;
 	case KEY_LEFT:
 	case 'h':
-		pa_cvolume_set(&inputs[cursor_pos].volume, inputs[cursor_pos].volume.channels, inputs[cursor_pos].volume.values[0] - 3276);
+		pa_cvolume_dec(&inputs[cursor_pos].volume, INC);
 		pa_context_set_sink_input_volume(context,
 			inputs[cursor_pos].index,
 			&inputs[cursor_pos].volume,
@@ -135,7 +136,7 @@ void stdin_callback(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flag
 		break;
 	case KEY_RIGHT:
 	case 'l':
-		pa_cvolume_set(&inputs[cursor_pos].volume, inputs[cursor_pos].volume.channels, inputs[cursor_pos].volume.values[0] + 3276);
+		pa_cvolume_inc_clamp(&inputs[cursor_pos].volume, INC, PA_VOLUME_NORM);
 		pa_context_set_sink_input_volume(context,
 			inputs[cursor_pos].index,
 			&inputs[cursor_pos].volume,
