@@ -41,7 +41,6 @@ static WINDOW *windows[MAX_INPUTS];
  * TODO:
  * - Disambiguate duplicate names
  * - Handle large # of inputs (scrolling, don't segfault on inputs > 64)
- * - Clean up on exit (free main loop, endwin)
  */
 int main(void)
 {
@@ -81,6 +80,10 @@ int main(void)
 	pa_signal_new(SIGWINCH, signal_cb, NULL);
 
 	pa_mainloop_run(m, NULL);
+
+	endwin();
+	pa_context_disconnect(c);
+	pa_mainloop_free(m);
 
 	return EXIT_SUCCESS;
 }
@@ -137,6 +140,7 @@ static void draw_ui(void)
 
 		wclear(w);
 		wnoutrefresh(w);
+		delwin(w);
 		windows[i] = NULL;
 	}
 
@@ -145,6 +149,7 @@ static void draw_ui(void)
 
 static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_flags_t f, void *context)
 {
+	pa_operation *o;
 	struct input_data *input;
 	int ch;
 
@@ -163,29 +168,33 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 	case 'h':
 		input = &inputs[cursor_pos];
 		pa_cvolume_dec(&input->volume, INC);
-		pa_context_set_sink_input_volume(context,
+		o = pa_context_set_sink_input_volume(context,
 			input->index,
 			&input->volume,
 			NULL,
 			NULL);
+		pa_operation_unref(o);
 		break;
 	case KEY_RIGHT:
 	case 'l':
 		input = &inputs[cursor_pos];
 		pa_cvolume_inc_clamp(&input->volume, INC, PA_VOLUME_NORM);
-		pa_context_set_sink_input_volume(context,
+		o = pa_context_set_sink_input_volume(context,
 			input->index,
 			&input->volume,
 			NULL,
 			NULL);
+		pa_operation_unref(o);
 		break;
 	case 'm':
 		input = &inputs[cursor_pos];
-		pa_context_set_sink_input_mute(context,
+		o = pa_context_set_sink_input_mute(context,
 			input->index,
 			!input->mute,
 			NULL,
 			NULL);
+		pa_operation_unref(o);
+		break;
 	case 'q':
 		a->quit(a, 0);
 		break;
@@ -211,6 +220,8 @@ static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal, void *
 
 static void context_state_cb(pa_context *c, void *userdata)
 {
+	pa_operation *o;
+
 	switch (pa_context_get_state(c)) {
 	case PA_CONTEXT_AUTHORIZING:
 	case PA_CONTEXT_CONNECTING:
@@ -220,10 +231,12 @@ static void context_state_cb(pa_context *c, void *userdata)
 	case PA_CONTEXT_UNCONNECTED:
 		break;
 	case PA_CONTEXT_READY:
-		//TODO: dec operation?
-		pa_context_get_sink_input_info_list(c, input_info_cb, NULL);
+		o = pa_context_get_sink_input_info_list(c, input_info_cb, NULL);
+		pa_operation_unref(o);
+
 		pa_context_set_subscribe_callback(c, input_event_cb, NULL);
-		pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK_INPUT, NULL, NULL);
+		o = pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK_INPUT, NULL, NULL);
+		pa_operation_unref(o);
 		break;
 
 	}
@@ -231,9 +244,11 @@ static void context_state_cb(pa_context *c, void *userdata)
 
 static void input_event_cb(pa_context *c, pa_subscription_event_type_t t, uint32_t index, void *userdata)
 {
+	pa_operation *o;
+
 	num_inputs = 0;
-	//Decrement operation?
-	pa_context_get_sink_input_info_list(c, input_info_cb, NULL);
+	o = pa_context_get_sink_input_info_list(c, input_info_cb, NULL);
+	pa_operation_unref(o);
 }
 
 static void input_info_cb(pa_context *c, const pa_sink_input_info *i, int eol, void *userdata)
