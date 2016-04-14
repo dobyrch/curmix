@@ -76,6 +76,8 @@ int main(void)
 	a->io_new(a, STDIN_FILENO, PA_IO_EVENT_INPUT, stdin_cb, c);
 
 	pa_signal_init(a);
+	pa_signal_new(SIGINT, signal_cb, NULL);
+	pa_signal_new(SIGTERM, signal_cb, NULL);
 	pa_signal_new(SIGWINCH, signal_cb, NULL);
 
 	pa_mainloop_run(m, NULL);
@@ -184,6 +186,8 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 			!input->mute,
 			NULL,
 			NULL);
+	case 'q':
+		a->quit(a, 0);
 		break;
 	}
 
@@ -193,6 +197,10 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal, void *userdata)
 {
 	switch (signal) {
+	case SIGINT:
+	case SIGTERM:
+		a->quit(a, 0);
+		break;
 	case SIGWINCH:
 		clear();
 		refresh();
