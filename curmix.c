@@ -110,10 +110,9 @@ static void draw_ui(int resized)
 	struct input_data *input;
 	WINDOW *w;
 	cchar_t volume_bar;
-	int volume, i, j, termwidth, winwidth;
+	int volume, i, j, width;
 
-	termwidth = getmaxx(stdscr);
-	winwidth = termwidth - HPAD*2;
+	width = getmaxx(stdscr) - HPAD*2;
 
 	if (num_inputs == 0) {
 		mvaddstr(VPAD, HPAD, "No Inputs found");
@@ -127,9 +126,9 @@ static void draw_ui(int resized)
 		input = &inputs[i];
 		w = windows[i];
 		if (w == NULL)
-			w = windows[i] = newwin(3, winwidth, (VPAD + 3)*i + VPAD, HPAD);
+			w = windows[i] = newwin(3, width, (VPAD + 3)*i + VPAD, HPAD);
 		if (resized)
-			wresize(w, 3, winwidth);
+			wresize(w, 3, width);
 
 		box(w, 0, 0);
 		mvwaddnstr(w, 0, 2, input->name, MAX_NAME_LEN);
@@ -138,17 +137,17 @@ static void draw_ui(int resized)
 			mvwchgat(w, 0, 2, strnlen(input->name, MAX_NAME_LEN),
 				A_NORMAL, 7, NULL);
 
-		volume = pa_cvolume_avg(&input->volume)*(winwidth - 2)/PA_VOLUME_NORM;
+		volume = pa_cvolume_avg(&input->volume)*(width - 2)/PA_VOLUME_NORM;
 		wmove(w, 1, 1);
 
 		for (j = 0; j < volume; ++j) {
 			setcchar(&volume_bar, &medium_shade,
 				input->mute ? A_BOLD : A_NORMAL,
-				input->mute ? 6 : j*5/(winwidth - 2)+1, NULL);
+				input->mute ? 6 : j*5/(width - 2)+1, NULL);
 			wadd_wch(w, &volume_bar);
 		}
 
-		for (j = volume; j < winwidth - 2; ++j) {
+		for (j = volume; j < width - 2; ++j) {
 			waddch(w, ' ');
 		}
 
