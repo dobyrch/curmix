@@ -132,10 +132,11 @@ static void draw_ui(int resized)
 			wresize(w, 3, winwidth);
 
 		box(w, 0, 0);
-		mvwaddstr(w, 0, 2, input->name);
+		mvwaddnstr(w, 0, 2, input->name, MAX_NAME_LEN);
 
 		if (i == cursor_pos)
-			mvwchgat(w, 0, 2, strlen(input->name), A_NORMAL, 7, NULL);
+			mvwchgat(w, 0, 2, strnlen(input->name, MAX_NAME_LEN),
+				A_NORMAL, 7, NULL);
 
 		volume = pa_cvolume_avg(&input->volume)*(winwidth - 2)/PA_VOLUME_NORM;
 		wmove(w, 1, 1);
