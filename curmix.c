@@ -8,7 +8,7 @@
 #include <pulse/pulseaudio.h>
 
 
-static void draw_ui(void);
+static void draw_ui(int resized);
 static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd,
 	pa_io_event_flags_t f, void *context);
 static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal,
@@ -20,9 +20,11 @@ static void input_info_cb(pa_context *c, const pa_sink_input_info *i, int eol,
 	void *userdata);
 
 
+#define HPAD 6
+#define VPAD 3
 #define MAX_INPUTS 64
 #define MAX_NAME_LEN 32
-/* Change volume in increments of 5% */
+/* Adjust volume in increments of 5% */
 #define INC PA_VOLUME_NORM/20
 
 struct input_data {
@@ -88,16 +90,33 @@ int main(void)
 	return EXIT_SUCCESS;
 }
 
-static void draw_ui(void)
+/*
+ * The UI looks something like this:
+ *
+ * H ┌─program1─────────────────────────────────┐
+ *   │░░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓███████       │
+ * P └──────────────────────────────────────────┘
+ *                   V  P  A  D
+ * A ┌─program2─────────────────────────────────┐
+ *   │░░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓                   │
+ * D └──────────────────────────────────────────┘
+ *
+ * The definitions of HPAD and VPAD control the spacing between
+ * volume bars and the edge of the terminal as shown above.
+ */
+static void draw_ui(int resized)
 {
 	static const wchar_t medium_shade = L'\u2592';
 	struct input_data *input;
 	WINDOW *w;
 	cchar_t volume_bar;
-	int volume, i, j;
+	int volume, i, j, termwidth, winwidth;
+
+	termwidth = getmaxx(stdscr);
+	winwidth = termwidth - HPAD*2;
 
 	if (num_inputs == 0) {
-		mvaddstr(3, 5, "No Inputs found");
+		mvaddstr(VPAD, HPAD, "No Inputs found");
 		refresh();
 	}
 
@@ -108,25 +127,27 @@ static void draw_ui(void)
 		input = &inputs[i];
 		w = windows[i];
 		if (w == NULL)
-			w = windows[i] = newwin(3, 42, 4*i + 2, 2);
+			w = windows[i] = newwin(3, winwidth, (VPAD + 3)*i + VPAD, HPAD);
+		if (resized)
+			wresize(w, 3, winwidth);
 
 		box(w, 0, 0);
-		mvwaddstr(w, 0, 3, input->name);
+		mvwaddstr(w, 0, 2, input->name);
 
 		if (i == cursor_pos)
-			mvwchgat(w, 0, 3, strlen(input->name), A_NORMAL, 7, NULL);
+			mvwchgat(w, 0, 2, strlen(input->name), A_NORMAL, 7, NULL);
 
-		volume = input->volume.values[0]/1638;
+		volume = pa_cvolume_avg(&input->volume)*(winwidth - 2)/PA_VOLUME_NORM;
 		wmove(w, 1, 1);
 
 		for (j = 0; j < volume; ++j) {
 			setcchar(&volume_bar, &medium_shade,
 				input->mute ? A_BOLD : A_NORMAL,
-				input->mute ? 6 : j/8+1, NULL);
+				input->mute ? 6 : j*5/(winwidth - 2)+1, NULL);
 			wadd_wch(w, &volume_bar);
 		}
 
-		for (j = volume; j < 40; ++j) {
+		for (j = volume; j < winwidth - 2; ++j) {
 			waddch(w, ' ');
 		}
 
@@ -200,7 +221,7 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 		break;
 	}
 
-	draw_ui();
+	draw_ui(FALSE);
 }
 
 static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal, void *userdata)
@@ -211,9 +232,11 @@ static void signal_cb(pa_mainloop_api *a, pa_signal_event *e, int signal, void *
 		a->quit(a, 0);
 		break;
 	case SIGWINCH:
-		clear();
+		endwin();
 		refresh();
-		draw_ui();
+		clear();
+		draw_ui(TRUE);
+
 		break;
 	}
 }
@@ -257,7 +280,7 @@ static void input_info_cb(pa_context *c, const pa_sink_input_info *i, int eol, v
 	const char *name;
 
 	if (eol) {
-		draw_ui();
+		draw_ui(FALSE);
 		return;
 	}
 
