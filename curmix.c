@@ -42,7 +42,7 @@ static WINDOW *windows[MAX_INPUTS];
 /*
  * TODO:
  * - Disambiguate duplicate names
- * - Handle large # of inputs (scrolling, don't segfault on inputs > 64)
+ * - Handle large # of inputs (scrolling)
  */
 int main(void)
 {
@@ -279,7 +279,7 @@ static void input_info_cb(pa_context *c, const pa_sink_input_info *i, int eol, v
 	struct input_data *input;
 	const char *name;
 
-	if (eol) {
+	if (eol || num_inputs >= MAX_INPUTS) {
 		draw_ui(FALSE);
 		return;
 	}
