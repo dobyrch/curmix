@@ -85,6 +85,7 @@ int main(void)
 
 	endwin();
 	pa_context_disconnect(c);
+	pa_context_unref(c);
 	pa_mainloop_free(m);
 
 	return EXIT_SUCCESS;
