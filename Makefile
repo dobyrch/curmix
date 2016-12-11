@@ -1,2 +1,2 @@
 curmix: curmix.c
-	clang $^ -o $@ -D_XOPEN_SOURCE_EXTENDED -lcurses -lpulse  -Wall
+	cc $^ -o $@ -D_XOPEN_SOURCE_EXTENDED -lcurses -lpulse -Wall
