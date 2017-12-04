@@ -34,6 +34,10 @@ struct input_data {
 	int mute;
 };
 
+static struct pa_channel_map stereo_map = {2,
+	{PA_CHANNEL_POSITION_FRONT_LEFT,
+	PA_CHANNEL_POSITION_FRONT_RIGHT}};
+
 static int cursor_pos = 0;
 static int num_inputs = 0;
 static struct input_data inputs[MAX_INPUTS];
@@ -107,11 +111,14 @@ int main(void)
  */
 static void draw_ui(int resized)
 {
-	static const wchar_t medium_shade = L'\u2592';
+	static const wchar_t medium_shade = L'\u2592',
+		balance_left = L'\u257F',
+		balance_right = L'\u257D';
 	struct input_data *input;
 	WINDOW *w;
-	cchar_t volume_bar;
+	cchar_t volume_bar, balance_indicator;
 	int volume, i, j, width;
+	float balance;
 
 	width = getmaxx(stdscr) - HPAD*2;
 
@@ -138,7 +145,7 @@ static void draw_ui(int resized)
 			mvwchgat(w, 0, 2, strnlen(input->name, MAX_NAME_LEN),
 				A_NORMAL, 7, NULL);
 
-		volume = pa_cvolume_avg(&input->volume)*(width - 2)/PA_VOLUME_NORM;
+		volume = pa_cvolume_max(&input->volume)*(width - 2)/PA_VOLUME_NORM;
 		wmove(w, 1, 1);
 
 		for (j = 0; j < volume; ++j) {
@@ -150,6 +157,15 @@ static void draw_ui(int resized)
 
 		for (j = volume; j < width - 2; ++j) {
 			waddch(w, ' ');
+		}
+
+		balance = pa_cvolume_get_balance(&input->volume, &stereo_map);
+
+		if (balance != 0.0f) {
+			setcchar(&balance_indicator,
+				balance < 0.0f ? &balance_left : &balance_right,
+				A_NORMAL, 0, NULL);
+			mvwadd_wch(w, 1, 0, &balance_indicator);
 		}
 
 		wnoutrefresh(w);
@@ -175,7 +191,10 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 	struct input_data *input;
 	int ch;
 
-	switch (ch = getch()) {
+	input = &inputs[cursor_pos];
+	ch = getch();
+
+	switch (ch) {
 	case KEY_UP:
 	case 'k':
 		if (cursor_pos > 0)
@@ -188,7 +207,6 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 		break;
 	case KEY_LEFT:
 	case 'h':
-		input = &inputs[cursor_pos];
 		pa_cvolume_dec(&input->volume, INC);
 		o = pa_context_set_sink_input_volume(context,
 			input->index,
@@ -199,7 +217,6 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 		break;
 	case KEY_RIGHT:
 	case 'l':
-		input = &inputs[cursor_pos];
 		pa_cvolume_inc_clamp(&input->volume, INC, PA_VOLUME_NORM);
 		o = pa_context_set_sink_input_volume(context,
 			input->index,
@@ -209,13 +226,36 @@ static void stdin_cb(pa_mainloop_api *a, pa_io_event *e, int fd, pa_io_event_fla
 		pa_operation_unref(o);
 		break;
 	case 'm':
-		input = &inputs[cursor_pos];
 		o = pa_context_set_sink_input_mute(context,
 			input->index,
 			!input->mute,
 			NULL,
 			NULL);
 		pa_operation_unref(o);
+		break;
+	case '[':
+		pa_cvolume_set_balance(&input->volume, &stereo_map, -1.0f);
+		o = pa_context_set_sink_input_volume(context,
+			input->index,
+			&input->volume,
+			NULL,
+			NULL);
+		break;
+	case ']':
+		pa_cvolume_set_balance(&input->volume, &stereo_map, 1.0f);
+		o = pa_context_set_sink_input_volume(context,
+			input->index,
+			&input->volume,
+			NULL,
+			NULL);
+		break;
+	case '=':
+		pa_cvolume_set_balance(&input->volume, &stereo_map, 0.0f);
+		o = pa_context_set_sink_input_volume(context,
+			input->index,
+			&input->volume,
+			NULL,
+			NULL);
 		break;
 	case 'q':
 		a->quit(a, 0);
